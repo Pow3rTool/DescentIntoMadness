@@ -1,0 +1,2729 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#17152d">
+  <title>Gradient Shaker — An optimizer you can feel</title>
+  <style>
+    :root {
+      --ink: #201d3b;
+      --muted: #6d6980;
+      --paper: #f5f0e8;
+      --panel: #fffdf8;
+      --line: #d8d0c7;
+      --purple: #6c5ce7;
+      --purple-dark: #403395;
+      --coral: #ff705d;
+      --mint: #48c6a8;
+      --sun: #f7c852;
+      --shadow: 0 20px 50px rgba(41, 34, 73, .12);
+    }
+
+    * { box-sizing: border-box; }
+
+    html { min-width: 320px; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 8% 2%, rgba(255, 112, 93, .14), transparent 26rem),
+        radial-gradient(circle at 96% 15%, rgba(108, 92, 231, .14), transparent 30rem),
+        var(--paper);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, input, select { font: inherit; }
+    button, select, input[type="range"] { cursor: pointer; }
+    button:focus-visible, select:focus-visible, input:focus-visible, canvas:focus-visible {
+      outline: 3px solid rgba(108, 92, 231, .35);
+      outline-offset: 3px;
+    }
+
+    .shell {
+      width: min(1400px, calc(100% - 36px));
+      margin: 0 auto;
+      padding: 28px 0 48px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 28px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: .78rem;
+      font-weight: 850;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .brand-mark {
+      position: relative;
+      width: 35px;
+      height: 35px;
+      border: 2px solid var(--ink);
+      border-radius: 10px;
+      transform: rotate(-4deg);
+      background: var(--sun);
+      box-shadow: 3px 3px 0 var(--ink);
+    }
+
+    .brand-mark::after {
+      content: "";
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      top: 10px;
+      left: 10px;
+      background: var(--ink);
+      box-shadow: 5px -6px 0 -2px rgba(255,255,255,.8);
+    }
+
+    .mini-guide {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: .8rem;
+      font-weight: 700;
+    }
+
+    .mini-guide span {
+      display: grid;
+      place-items: center;
+      width: 24px;
+      height: 24px;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      color: var(--ink);
+      background: rgba(255,255,255,.55);
+      font-size: .68rem;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(300px, .82fr) minmax(480px, 1.55fr);
+      gap: clamp(28px, 5vw, 76px);
+      align-items: center;
+      margin-bottom: 34px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      border: 1px solid rgba(64, 51, 149, .18);
+      border-radius: 999px;
+      color: var(--purple-dark);
+      background: rgba(108, 92, 231, .08);
+      font-size: .68rem;
+      font-weight: 850;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--coral);
+      box-shadow: 0 0 0 4px rgba(255, 112, 93, .14);
+    }
+
+    h1 {
+      max-width: 660px;
+      margin: 18px 0 18px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(3.1rem, 6.2vw, 6.6rem);
+      font-weight: 500;
+      line-height: .86;
+      letter-spacing: -.055em;
+    }
+
+    h1 em {
+      position: relative;
+      color: var(--purple);
+      font-weight: inherit;
+    }
+
+    h1 em::after {
+      content: "";
+      position: absolute;
+      left: 4%;
+      right: -2%;
+      bottom: -5px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--coral);
+      opacity: .7;
+      transform: rotate(-1.5deg) scaleY(.55);
+    }
+
+    .lede {
+      max-width: 510px;
+      margin: 0 0 24px;
+      color: var(--muted);
+      font-size: 1.02rem;
+      line-height: 1.65;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      color: var(--muted);
+      font-size: .76rem;
+      font-weight: 750;
+    }
+
+    .legend-item { display: flex; align-items: center; gap: 7px; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .legend-line { width: 21px; border-top: 2px solid var(--purple-dark); }
+    .legend-arrow { color: var(--coral); font-size: 1rem; line-height: 0; }
+
+    .sim-card {
+      position: relative;
+      min-width: 0;
+      padding: 12px;
+      border: 1px solid rgba(32, 29, 59, .12);
+      border-radius: 26px;
+      background: var(--panel);
+      box-shadow: var(--shadow), 0 3px 0 rgba(32, 29, 59, .08);
+    }
+
+    .sim-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 50px;
+      padding: 3px 6px 11px;
+    }
+
+    .surface-select {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      min-width: 0;
+    }
+
+    .surface-select label {
+      color: var(--muted);
+      font-size: .68rem;
+      font-weight: 850;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    select {
+      max-width: 175px;
+      border: 0;
+      color: var(--ink);
+      background: transparent;
+      font-weight: 800;
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 10px;
+      border: 1px solid rgba(72, 198, 168, .22);
+      border-radius: 999px;
+      color: #207965;
+      background: rgba(72, 198, 168, .1);
+      font-size: .7rem;
+      font-weight: 850;
+      white-space: nowrap;
+    }
+
+    .status-pill::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .status-pill.running::before { animation: pulse 1s ease-in-out infinite; }
+    .status-pill.warning { color: #bd4c3e; border-color: rgba(255,112,93,.25); background: rgba(255,112,93,.1); }
+
+    @keyframes pulse { 50% { transform: scale(.5); opacity: .45; } }
+
+    .canvas-wrap {
+      position: relative;
+      overflow: hidden;
+      aspect-ratio: 1.68 / 1;
+      min-height: 330px;
+      border: 1px solid rgba(32, 29, 59, .1);
+      border-radius: 18px;
+      background: #e8e2f4;
+      isolation: isolate;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+      cursor: crosshair;
+    }
+
+    .canvas-hint {
+      position: absolute;
+      left: 15px;
+      bottom: 14px;
+      z-index: 2;
+      padding: 7px 10px;
+      border: 1px solid rgba(255,255,255,.5);
+      border-radius: 999px;
+      color: rgba(255,255,255,.88);
+      background: rgba(24, 21, 52, .46);
+      backdrop-filter: blur(6px);
+      font-size: .68rem;
+      font-weight: 700;
+      pointer-events: none;
+      transition: opacity .25s;
+    }
+
+    .canvas-wrap.touched .canvas-hint { opacity: 0; }
+
+    .readout {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      overflow: hidden;
+      margin-top: 10px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--line);
+    }
+
+    .metric { padding: 11px 12px; background: #fbf8f2; }
+    .metric-label {
+      display: block;
+      margin-bottom: 2px;
+      color: var(--muted);
+      font-size: .59rem;
+      font-weight: 850;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+    .metric-value { font-variant-numeric: tabular-nums; font-size: .98rem; font-weight: 850; }
+    .metric-value.good { color: #1b8169; }
+
+    .lab {
+      display: grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap: 20px;
+    }
+
+    .panel {
+      border: 1px solid rgba(32, 29, 59, .12);
+      border-radius: 22px;
+      background: rgba(255, 253, 248, .88);
+      box-shadow: 0 10px 30px rgba(41, 34, 73, .06);
+    }
+
+    .controls-panel {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 22px;
+      padding: 22px;
+    }
+
+    .controls-title {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 17px;
+    }
+
+    h2 { margin: 0; font-size: .93rem; letter-spacing: -.01em; }
+    .controls-title p { margin: 0; color: var(--muted); font-size: .72rem; }
+
+    .slider-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(120px, 1fr));
+      gap: 22px;
+    }
+
+    .control-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 9px;
+    }
+
+    .control-head label { font-size: .76rem; font-weight: 850; }
+    .control-value {
+      min-width: 44px;
+      padding: 3px 6px;
+      border-radius: 6px;
+      color: var(--purple-dark);
+      background: rgba(108, 92, 231, .09);
+      font-size: .7rem;
+      font-weight: 850;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 5px;
+      margin: 5px 0 8px;
+      border-radius: 99px;
+      background: linear-gradient(to right, var(--purple) 0 var(--fill, 30%), #ddd7d0 var(--fill, 30%) 100%);
+      appearance: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      width: 17px;
+      height: 17px;
+      border: 3px solid var(--panel);
+      border-radius: 50%;
+      background: var(--purple);
+      box-shadow: 0 0 0 1px rgba(32,29,59,.18), 0 2px 5px rgba(32,29,59,.22);
+      appearance: none;
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 12px;
+      height: 12px;
+      border: 3px solid var(--panel);
+      border-radius: 50%;
+      background: var(--purple);
+      box-shadow: 0 0 0 1px rgba(32,29,59,.18);
+    }
+
+    .control-note { margin: 0; color: var(--muted); font-size: .64rem; line-height: 1.35; }
+
+    .transport {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding-left: 22px;
+      border-left: 1px solid var(--line);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      color: var(--ink);
+      background: #fffdf9;
+      font-size: .74rem;
+      font-weight: 850;
+      transition: transform .15s, box-shadow .15s, background .15s;
+    }
+
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 5px 12px rgba(32,29,59,.1); }
+    .btn:active { transform: translateY(0); }
+    .btn-square { width: 42px; padding: 0; font-size: 1rem; }
+    .btn-play {
+      gap: 8px;
+      min-width: 105px;
+      padding: 0 16px;
+      border-color: var(--purple-dark);
+      color: white;
+      background: var(--purple-dark);
+      box-shadow: 3px 3px 0 rgba(32,29,59,.2);
+    }
+
+    .coach-panel {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 15px;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .coach-icon {
+      position: relative;
+      display: grid;
+      place-items: center;
+      width: 48px;
+      height: 48px;
+      border-radius: 15px;
+      color: var(--purple-dark);
+      background: rgba(247, 200, 82, .45);
+      font-family: Georgia, serif;
+      font-size: 1.4rem;
+      font-style: italic;
+      font-weight: 700;
+      transform: rotate(-3deg);
+    }
+
+    .coach-kicker {
+      margin-bottom: 4px;
+      color: var(--coral);
+      font-size: .61rem;
+      font-weight: 900;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .coach-copy { margin: 0; font-size: .8rem; line-height: 1.46; }
+    .coach-copy strong { color: var(--purple-dark); }
+
+    .challenges {
+      grid-column: 1 / -1;
+      padding: 18px 20px 20px;
+    }
+
+    .challenge-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 12px;
+    }
+
+    .challenge-head p { margin: 0; color: var(--muted); font-size: .7rem; }
+
+    .challenge-list { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+
+    .challenge {
+      position: relative;
+      min-width: 0;
+      padding: 13px 14px 12px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      color: var(--ink);
+      background: #fffdf9;
+      text-align: left;
+      transition: transform .15s, border-color .15s, background .15s;
+    }
+
+    .challenge:hover { transform: translateY(-2px); border-color: rgba(108,92,231,.38); }
+    .challenge.active { border-color: rgba(108,92,231,.5); background: rgba(108,92,231,.07); }
+    .challenge-number {
+      display: inline-grid;
+      place-items: center;
+      width: 20px;
+      height: 20px;
+      margin-right: 5px;
+      border-radius: 6px;
+      color: white;
+      background: var(--purple);
+      font-size: .58rem;
+      font-weight: 900;
+      vertical-align: 1px;
+    }
+    .challenge strong { font-size: .76rem; }
+    .challenge small { display: block; margin-top: 5px; color: var(--muted); font-size: .62rem; line-height: 1.35; }
+
+
+    .bridge {
+      margin-top: 54px;
+      padding-top: 50px;
+      border-top: 1px solid rgba(32, 29, 59, .14);
+    }
+
+    .bridge-heading {
+      display: grid;
+      grid-template-columns: minmax(260px, .7fr) minmax(340px, 1fr);
+      gap: 40px;
+      align-items: end;
+      margin-bottom: 24px;
+    }
+
+    .bridge-heading h2 {
+      margin-top: 10px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(2.1rem, 4vw, 3.8rem);
+      font-weight: 500;
+      line-height: 1;
+      letter-spacing: -.04em;
+    }
+
+    .bridge-heading p {
+      max-width: 650px;
+      margin: 0;
+      color: var(--muted);
+      font-size: .9rem;
+      line-height: 1.6;
+    }
+
+    .translation {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 1px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--line);
+    }
+
+    .translation-item {
+      min-width: 0;
+      padding: 18px 16px;
+      background: var(--panel);
+    }
+
+    .translation-icon {
+      display: grid;
+      place-items: center;
+      width: 35px;
+      height: 35px;
+      margin-bottom: 14px;
+      border-radius: 10px;
+      color: white;
+      background: var(--purple);
+      font-family: Georgia, serif;
+      font-size: 1rem;
+      font-weight: 700;
+      box-shadow: 2px 2px 0 rgba(32,29,59,.16);
+    }
+
+    .translation-item:nth-child(2) .translation-icon { background: #a35b9d; }
+    .translation-item:nth-child(3) .translation-icon { background: var(--coral); }
+    .translation-item:nth-child(4) .translation-icon { color: var(--ink); background: var(--sun); }
+    .translation-item:nth-child(5) .translation-icon { background: var(--mint); }
+    .translation-item strong { display: block; margin-bottom: 5px; font-size: .75rem; }
+    .translation-item p { margin: 0; color: var(--muted); font-size: .65rem; line-height: 1.45; }
+
+    .reality-grid {
+      display: grid;
+      grid-template-columns: 1.38fr .62fr;
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    .training-loop, .honest-box { padding: 22px; }
+
+    .section-kicker {
+      margin-bottom: 6px;
+      color: var(--purple-dark);
+      font-size: .61rem;
+      font-weight: 900;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .training-loop > p, .honest-box > p {
+      margin: 6px 0 18px;
+      color: var(--muted);
+      font-size: .72rem;
+      line-height: 1.5;
+    }
+
+    .loop-flow {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 18px;
+      counter-reset: loop;
+    }
+
+    .loop-step {
+      position: relative;
+      min-width: 0;
+      padding: 13px 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fbf8f2;
+      counter-increment: loop;
+    }
+
+    .loop-step:not(:last-child)::after {
+      content: "→";
+      position: absolute;
+      right: -15px;
+      top: 50%;
+      z-index: 2;
+      color: var(--coral);
+      font-weight: 900;
+      transform: translateY(-55%);
+    }
+
+    .loop-step::before {
+      content: "0" counter(loop);
+      display: block;
+      margin-bottom: 6px;
+      color: var(--purple);
+      font-size: .57rem;
+      font-weight: 900;
+      letter-spacing: .08em;
+    }
+
+    .loop-step strong { display: block; margin-bottom: 4px; font-size: .68rem; }
+    .loop-step small { display: block; color: var(--muted); font-size: .59rem; line-height: 1.4; }
+
+    .equation {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin-top: 15px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      color: rgba(255,255,255,.82);
+      background: var(--ink);
+      font-size: .66rem;
+    }
+
+    .equation code {
+      color: white;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: .78rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .honest-box {
+      color: white;
+      border-color: var(--ink);
+      background: var(--ink);
+      box-shadow: 5px 5px 0 rgba(255,112,93,.55);
+    }
+
+    .honest-box .section-kicker { color: var(--sun); }
+    .honest-box > p { color: rgba(255,255,255,.65); }
+    .honest-list { display: grid; gap: 11px; margin: 0; padding: 0; list-style: none; }
+
+    .honest-list li {
+      position: relative;
+      padding-left: 18px;
+      color: rgba(255,255,255,.8);
+      font-size: .66rem;
+      line-height: 1.42;
+    }
+
+    .honest-list li::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: .42em;
+      width: 7px;
+      height: 7px;
+      border: 2px solid var(--coral);
+      border-radius: 50%;
+    }
+
+    .honest-list strong { color: white; }
+
+    .next-ladder {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 20px;
+      padding: 13px 16px;
+      border: 1px dashed rgba(64, 51, 149, .3);
+      border-radius: 14px;
+      color: var(--muted);
+      font-size: .67rem;
+      line-height: 1.45;
+    }
+
+    .next-ladder strong { color: var(--ink); white-space: nowrap; }
+    .next-ladder span { color: var(--coral); font-weight: 900; }
+
+    @media (max-width: 1050px) {
+      .translation { grid-template-columns: repeat(3, 1fr); }
+      .reality-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 760px) {
+      .bridge-heading { grid-template-columns: 1fr; gap: 12px; }
+      .translation { grid-template-columns: 1fr 1fr; }
+      .loop-flow { grid-template-columns: 1fr; gap: 8px; }
+      .loop-step:not(:last-child)::after { content: "↓"; right: 14px; top: auto; bottom: -13px; }
+      .equation { align-items: flex-start; flex-direction: column; }
+      .next-ladder { align-items: flex-start; flex-direction: column; }
+    }
+
+    @media (max-width: 430px) {
+      .translation { grid-template-columns: 1fr; }
+    }
+
+    .footer-note {
+      margin: 20px 4px 0;
+      color: var(--muted);
+      font-size: .68rem;
+      text-align: center;
+    }
+
+    @media (max-width: 1050px) {
+      .hero { grid-template-columns: 1fr; gap: 28px; }
+      .hero-copy { display: grid; grid-template-columns: 1fr 1fr; column-gap: 30px; align-items: end; }
+      .eyebrow, h1 { grid-column: 1; }
+      .lede, .legend { grid-column: 2; }
+      .lede { grid-row: 2; margin-bottom: 18px; }
+      .legend { grid-row: 3; }
+      h1 { font-size: clamp(3.7rem, 10vw, 6.5rem); }
+      .lab { grid-template-columns: 1fr; }
+      .challenges { grid-column: auto; }
+    }
+
+    @media (max-width: 760px) {
+      .shell { width: min(100% - 20px, 680px); padding-top: 16px; }
+      .mini-guide { display: none; }
+      .hero-copy { display: block; }
+      h1 { margin-top: 16px; font-size: clamp(3.2rem, 17vw, 5.5rem); }
+      .canvas-wrap { min-height: 300px; aspect-ratio: 1.25 / 1; }
+      .controls-panel { grid-template-columns: 1fr; }
+      .slider-grid { grid-template-columns: 1fr; gap: 16px; }
+      .transport { justify-content: center; padding: 17px 0 0; border-left: 0; border-top: 1px solid var(--line); }
+      .challenge-list { grid-template-columns: 1fr 1fr; }
+      .readout { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 430px) {
+      .sim-toolbar { align-items: flex-start; }
+      .surface-select { align-items: flex-start; flex-direction: column; gap: 2px; }
+      .status-pill { margin-top: 4px; }
+      .canvas-wrap { min-height: 300px; }
+      .challenge-list { grid-template-columns: 1fr; }
+      .challenge-head { align-items: flex-start; flex-direction: column; gap: 4px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .001ms !important; animation-iteration-count: 1 !important; }
+    }
+
+    /* Dark stage: keep the interactive demonstration above the fold. */
+    :root {
+      --ink: #f4f1ff;
+      --muted: #aaa5bf;
+      --paper: #0d0b18;
+      --panel: #171429;
+      --line: #342f4b;
+      --purple: #8b7cf6;
+      --purple-dark: #7060e8;
+      --coral: #ff7462;
+      --mint: #4fd0b0;
+      --sun: #f8ca59;
+      --shadow: 0 24px 70px rgba(0, 0, 0, .34);
+    }
+
+    html { background: var(--paper); }
+
+    body {
+      background:
+        radial-gradient(circle at 8% -8%, rgba(255, 116, 98, .13), transparent 28rem),
+        radial-gradient(circle at 95% 8%, rgba(112, 96, 232, .18), transparent 34rem),
+        linear-gradient(180deg, #110e20 0%, #0d0b18 42%, #0a0912 100%);
+    }
+
+    .shell {
+      width: min(1600px, calc(100% - 32px));
+      padding-top: 17px;
+    }
+
+    .topbar { margin-bottom: 12px; }
+
+    .brand-mark {
+      border-color: #2a2442;
+      box-shadow: 3px 3px 0 rgba(244, 241, 255, .22);
+    }
+
+    .mini-guide span {
+      border-color: var(--line);
+      background: rgba(255,255,255,.035);
+    }
+
+    .hero {
+      display: block;
+      margin-bottom: 12px;
+    }
+
+    .hero-copy {
+      display: grid;
+      grid-template-columns: minmax(430px, .92fr) minmax(440px, 1.08fr);
+      grid-template-rows: auto auto;
+      column-gap: clamp(32px, 5vw, 84px);
+      align-items: end;
+      margin-bottom: 13px;
+    }
+
+    .hero-copy .eyebrow {
+      grid-column: 1;
+      grid-row: 1;
+      justify-self: start;
+    }
+
+    .hero-copy h1 {
+      grid-column: 1;
+      grid-row: 2;
+      max-width: none;
+      margin: 7px 0 0;
+      font-size: clamp(3rem, 4.2vw, 4.35rem);
+      line-height: .9;
+      white-space: nowrap;
+    }
+
+    .hero-copy .lede {
+      grid-column: 2;
+      grid-row: 1;
+      max-width: 660px;
+      margin: 0 0 7px;
+      color: var(--muted);
+      font-size: .88rem;
+      line-height: 1.52;
+    }
+
+    .hero-copy .legend {
+      grid-column: 2;
+      grid-row: 2;
+      align-self: start;
+      padding-top: 4px;
+    }
+
+    .eyebrow {
+      color: #beb6ff;
+      border-color: rgba(139, 124, 246, .26);
+      background: rgba(139, 124, 246, .1);
+    }
+
+    .sim-card {
+      width: 100%;
+      padding: 10px;
+      border-color: var(--line);
+      background: rgba(21, 18, 38, .96);
+      box-shadow: var(--shadow), 0 3px 0 rgba(139,124,246,.1);
+    }
+
+    .surface-select label, .metric-label, .controls-title p, .control-note,
+    .challenge-head p, .challenge small, .translation-item p,
+    .training-loop > p, .next-ladder, .footer-note {
+      color: var(--muted);
+    }
+
+    select { color: var(--ink); }
+    select option { color: var(--ink); background: #1a162d; }
+
+    .canvas-wrap {
+      width: 100%;
+      height: clamp(300px, 39vh, 520px);
+      min-height: 0;
+      aspect-ratio: auto;
+      border-color: rgba(139,124,246,.2);
+      background: #0e0c1b;
+    }
+
+    .readout {
+      border-color: var(--line);
+      background: var(--line);
+    }
+
+    .metric {
+      padding: 8px 12px;
+      background: #151225;
+    }
+
+    .metric-value.good { color: var(--mint); }
+
+    .lab {
+      grid-template-columns: minmax(0, 1.45fr) minmax(310px, .55fr);
+      gap: 12px;
+    }
+
+    .panel {
+      border-color: var(--line);
+      background: rgba(23, 20, 41, .94);
+      box-shadow: 0 14px 34px rgba(0,0,0,.2);
+    }
+
+    .controls-panel {
+      gap: 18px;
+      padding: 14px 16px;
+    }
+
+    .controls-title { margin-bottom: 10px; }
+
+    .control-value {
+      color: #c8c1ff;
+      background: rgba(139,124,246,.13);
+    }
+
+    input[type="range"] {
+      background: linear-gradient(to right, var(--purple) 0 var(--fill, 30%), #373249 var(--fill, 30%) 100%);
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      border-color: #171429;
+      box-shadow: 0 0 0 1px rgba(244,241,255,.25), 0 2px 7px rgba(0,0,0,.5);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      border-color: #171429;
+      box-shadow: 0 0 0 1px rgba(244,241,255,.25);
+    }
+
+    .transport {
+      padding-left: 16px;
+      border-color: var(--line);
+    }
+
+    .btn {
+      color: var(--ink);
+      border-color: var(--line);
+      background: #211d36;
+    }
+
+    .btn:hover {
+      border-color: rgba(139,124,246,.58);
+      background: #292440;
+      box-shadow: 0 7px 16px rgba(0,0,0,.28);
+    }
+
+    .btn-play {
+      border-color: #8b7cf6;
+      color: white;
+      background: #6252d6;
+      box-shadow: 3px 3px 0 rgba(0,0,0,.35);
+    }
+
+    .coach-panel { padding: 14px 16px; }
+
+    .coach-icon {
+      color: #211d3b;
+      background: var(--sun);
+    }
+
+    .challenge {
+      color: var(--ink);
+      border-color: var(--line);
+      background: #1c1830;
+    }
+
+    .challenge:hover {
+      border-color: rgba(139,124,246,.58);
+      background: #24203a;
+    }
+
+    .challenge.active {
+      border-color: rgba(139,124,246,.7);
+      background: rgba(139,124,246,.14);
+    }
+
+    .challenges {
+      margin-top: 24px;
+      padding: 18px 20px 20px;
+    }
+
+    .bridge {
+      margin-top: 44px;
+      border-color: var(--line);
+    }
+
+    .translation {
+      border-color: var(--line);
+      background: var(--line);
+    }
+
+    .translation-item { background: #171429; }
+
+    .loop-step {
+      border-color: var(--line);
+      background: #1c1830;
+    }
+
+    .equation, .honest-box {
+      border-color: #29243e;
+      background: #090811;
+    }
+
+    .honest-box {
+      box-shadow: 5px 5px 0 rgba(255,116,98,.48);
+    }
+
+    .next-ladder {
+      border-color: rgba(139,124,246,.34);
+      background: rgba(139,124,246,.035);
+    }
+
+    .next-ladder strong { color: var(--ink); }
+
+    @media (min-width: 1051px) and (max-height: 830px) {
+      .shell { padding-top: 10px; }
+      .topbar { margin-bottom: 7px; }
+      .brand-mark { width: 30px; height: 30px; }
+      .brand-mark::after { top: 8px; left: 8px; }
+      .hero-copy { margin-bottom: 8px; }
+      .hero-copy h1 { font-size: clamp(2.75rem, 4.2vw, 4rem); }
+      .hero-copy .lede { font-size: .79rem; line-height: 1.4; }
+      .canvas-wrap { height: clamp(270px, 35vh, 350px); }
+      .sim-toolbar { min-height: 42px; padding-bottom: 7px; }
+      .metric { padding: 6px 11px; }
+      .controls-panel { padding: 10px 14px; }
+      .controls-title { margin-bottom: 7px; }
+      .control-note { display: none; }
+      .coach-panel { padding: 10px 14px; }
+      .coach-icon { width: 42px; height: 42px; }
+    }
+
+    @media (max-width: 1050px) {
+      .hero-copy {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: auto auto;
+        column-gap: 28px;
+      }
+
+      .hero-copy h1 {
+        grid-column: 1;
+        grid-row: 2;
+        font-size: clamp(2.8rem, 7vw, 4.8rem);
+        white-space: normal;
+      }
+
+      .hero-copy .lede {
+        grid-column: 2;
+        grid-row: 1;
+      }
+
+      .hero-copy .legend {
+        grid-column: 2;
+        grid-row: 2;
+      }
+
+      .lab { grid-template-columns: 1fr; }
+      .coach-panel { min-height: 90px; }
+    }
+
+    @media (max-width: 760px) {
+      .shell { width: min(100% - 20px, 680px); }
+      .hero-copy { display: block; }
+      .hero-copy h1 {
+        margin: 9px 0 14px;
+        font-size: clamp(3rem, 15vw, 5rem);
+      }
+      .hero-copy .lede { margin-bottom: 12px; }
+      .hero-copy .legend { margin-bottom: 14px; }
+      .canvas-wrap { height: clamp(290px, 42vh, 410px); }
+      .controls-panel { padding: 16px; }
+      .transport { border-color: var(--line); }
+    }
+
+
+    .sr-only {
+      position: absolute !important;
+      width: 1px !important;
+      height: 1px !important;
+      padding: 0 !important;
+      margin: -1px !important;
+      overflow: hidden !important;
+      clip: rect(0, 0, 0, 0) !important;
+      white-space: nowrap !important;
+      border: 0 !important;
+    }
+
+    .baseline-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      min-height: 30px;
+      padding: 5px 9px;
+      border: 1px solid rgba(79, 208, 176, .26);
+      border-radius: 9px;
+      color: #cbc6dd;
+      background: rgba(79, 208, 176, .07);
+      font-size: .62rem;
+      font-weight: 750;
+      transition: border-color .15s, background .15s, transform .15s;
+    }
+
+    .baseline-btn span {
+      color: var(--mint);
+      font-size: .58rem;
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .baseline-btn:hover {
+      border-color: rgba(79, 208, 176, .58);
+      background: rgba(79, 208, 176, .12);
+      transform: translateY(-1px);
+    }
+
+    .control-note strong {
+      color: #ccc6df;
+      font-weight: 800;
+    }
+
+    @media (max-width: 760px) {
+      .controls-title {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .baseline-btn {
+        width: 100%;
+        justify-content: space-between;
+      }
+    }
+
+
+    .toy-scale {
+      padding: 4px 7px;
+      border: 1px solid rgba(139,124,246,.22);
+      border-radius: 999px;
+      color: #918ba6;
+      background: rgba(139,124,246,.06);
+      font-size: .56rem;
+      font-weight: 800;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    @media (max-width: 520px) {
+      .toy-scale { display: none; }
+    }
+
+
+    .field-guide {
+      margin-top: 48px;
+      padding-top: 46px;
+      border-top: 1px solid var(--line);
+    }
+
+    .field-guide-heading {
+      display: grid;
+      grid-template-columns: minmax(320px, .8fr) minmax(360px, 1.2fr);
+      gap: 42px;
+      align-items: end;
+      margin-bottom: 20px;
+    }
+
+    .field-guide-heading h2 {
+      margin: 10px 0 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(2rem, 3.5vw, 3.5rem);
+      font-weight: 500;
+      line-height: 1;
+      letter-spacing: -.04em;
+    }
+
+    .field-guide-heading p {
+      max-width: 690px;
+      margin: 0;
+      color: var(--muted);
+      font-size: .82rem;
+      line-height: 1.58;
+    }
+
+    .field-guide-grid {
+      display: grid;
+      grid-template-columns: .88fr 1.12fr;
+      gap: 16px;
+    }
+
+    .math-card, .config-card { padding: 22px; }
+
+    .formula-stack {
+      display: grid;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .formula-row {
+      display: grid;
+      grid-template-columns: 130px 1fr;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 13px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: #100e1d;
+    }
+
+    .formula-row > span {
+      color: var(--muted);
+      font-size: .62rem;
+      font-weight: 850;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    .formula-row code {
+      overflow-wrap: anywhere;
+      color: #f7f3ff;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: clamp(.68rem, 1vw, .82rem);
+      font-weight: 700;
+    }
+
+    .parameter-map {
+      display: grid;
+      gap: 1px;
+      overflow: hidden;
+      margin-top: 14px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: var(--line);
+    }
+
+    .parameter-map > div {
+      display: grid;
+      grid-template-columns: 145px 1fr;
+      gap: 14px;
+      padding: 10px 12px;
+      background: #1b172e;
+    }
+
+    .parameter-map strong {
+      color: #c9c2ff;
+      font-size: .66rem;
+    }
+
+    .parameter-map span {
+      color: var(--muted);
+      font-size: .64rem;
+      line-height: 1.4;
+    }
+
+    .parameter-map code {
+      color: var(--mint);
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: .62rem;
+    }
+
+    .config-card {
+      border-color: rgba(79,208,176,.24);
+      background: linear-gradient(145deg, rgba(22,28,39,.98), rgba(18,16,34,.98));
+    }
+
+    .config-card-head {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 13px;
+    }
+
+    .config-card-head h2 { margin-top: 2px; }
+
+    .config-card-head > span {
+      padding: 5px 7px;
+      border: 1px solid rgba(79,208,176,.22);
+      border-radius: 999px;
+      color: var(--mint);
+      background: rgba(79,208,176,.06);
+      font-size: .56rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .config-card pre {
+      overflow-x: auto;
+      margin: 0;
+      padding: 17px 18px;
+      border: 1px solid #302b45;
+      border-radius: 13px;
+      color: #ded9f0;
+      background: #090811;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.035);
+      line-height: 1.55;
+      tab-size: 2;
+    }
+
+    .config-card pre code {
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: .7rem;
+    }
+
+    .config-notes {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      overflow: hidden;
+      margin-top: 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--line);
+    }
+
+    .config-notes span {
+      padding: 10px;
+      color: var(--muted);
+      background: #18152a;
+      font-size: .59rem;
+      line-height: 1.4;
+    }
+
+    .config-notes strong {
+      display: block;
+      margin-bottom: 3px;
+      color: var(--ink);
+      font-size: .61rem;
+    }
+
+    @media (max-width: 900px) {
+      .field-guide-heading, .field-guide-grid { grid-template-columns: 1fr; }
+      .field-guide-heading { gap: 12px; }
+    }
+
+    @media (max-width: 600px) {
+      .math-card, .config-card { padding: 16px; }
+      .formula-row, .parameter-map > div { grid-template-columns: 1fr; gap: 5px; }
+      .config-card-head { align-items: flex-start; flex-direction: column; }
+      .config-notes { grid-template-columns: 1fr; }
+    }
+
+
+    .stage-settings {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .toolbar-field {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      min-width: 0;
+    }
+
+    .toolbar-field label {
+      color: var(--muted);
+      font-size: .58rem;
+      font-weight: 900;
+      letter-spacing: .09em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .toolbar-field select {
+      max-width: none;
+      padding-right: 3px;
+      font-size: .78rem;
+    }
+
+    .scenario-field select { width: 235px; }
+
+    .toolbar-divider {
+      width: 1px;
+      height: 24px;
+      background: var(--line);
+    }
+
+    .solve-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 34px;
+      padding: 0 13px;
+      border: 1px solid rgba(79,208,176,.48);
+      border-radius: 10px;
+      color: #dffbf4;
+      background: rgba(79,208,176,.12);
+      font-size: .7rem;
+      font-weight: 900;
+      box-shadow: 2px 2px 0 rgba(0,0,0,.28);
+      transition: transform .15s, background .15s, border-color .15s;
+    }
+
+    .solve-btn:hover {
+      border-color: var(--mint);
+      background: rgba(79,208,176,.2);
+      transform: translateY(-1px);
+    }
+
+    .solve-btn span {
+      color: var(--sun);
+      font-size: .9rem;
+    }
+
+    .canvas-wrap {
+      height: clamp(380px, 49vh, 650px);
+    }
+
+    .lab { display: block; }
+
+    .controls-panel {
+      width: 100%;
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .controls-title p {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    kbd {
+      display: inline-grid;
+      place-items: center;
+      min-width: 27px;
+      min-height: 20px;
+      padding: 1px 5px;
+      border: 1px solid #46405e;
+      border-bottom-width: 2px;
+      border-radius: 5px;
+      color: #d9d4e8;
+      background: #211d34;
+      font-family: inherit;
+      font-size: .57rem;
+      font-weight: 850;
+    }
+
+    @media (min-width: 1051px) and (max-height: 830px) {
+      .canvas-wrap { height: clamp(320px, 43vh, 420px); }
+    }
+
+    @media (max-width: 880px) {
+      .sim-toolbar { align-items: flex-start; }
+      .stage-settings { flex-wrap: wrap; }
+      .toolbar-divider { display: none; }
+      .scenario-field select { width: min(235px, 42vw); }
+    }
+
+    @media (max-width: 620px) {
+      .sim-toolbar { flex-direction: column; }
+      .stage-settings { width: 100%; gap: 9px; }
+      .toolbar-field {
+        width: 100%;
+        justify-content: space-between;
+      }
+      .toolbar-field select { width: min(68vw, 260px); }
+      .scenario-field select { width: min(68vw, 260px); }
+      .solve-btn { flex: 1; }
+      .canvas-wrap { height: clamp(340px, 50vh, 480px); }
+    }
+
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark" aria-hidden="true"></span> Gradient Shaker</div>
+      <div class="mini-guide" aria-label="Three step guide"><span>1</span> place <span>2</span> tune <span>3</span> shake</div>
+    </header>
+
+    <section class="hero">
+      <h1 class="sr-only">Gradient descent through a hidden loss landscape</h1>
+
+      <div class="sim-card">
+        <div class="sim-toolbar">
+          <div class="stage-settings">
+            <div class="toolbar-field">
+              <label for="surface">Loss surface</label>
+              <select id="surface" aria-label="Loss surface">
+                <option value="traps">Deceptive foothills</option>
+                <option value="uneven">Uneven valley</option>
+                <option value="needle">Hidden needle</option>
+              </select>
+            </div>
+            <div class="toolbar-divider" aria-hidden="true"></div>
+            <div class="toolbar-field scenario-field">
+              <label for="scenario">Scenario</label>
+              <select id="scenario" aria-label="Scenario">
+                <option value="local">Local trap · settles too soon</option>
+                <option value="overshoot">Overshoot · steps too large</option>
+                <option value="needle">Thread the needle · needs momentum</option>
+                <option value="shake">Shake free · noisy exploration</option>
+                <option value="custom">Custom experiment</option>
+              </select>
+            </div>
+            <button class="solve-btn" id="solve" type="button" title="Load tested parameters and run to the absolute minimum">
+              <span aria-hidden="true">✦</span> Solve
+            </button>
+            <span class="toy-scale">normalized toy units</span>
+          </div>
+          <div class="status-pill" id="status">Scenario ready</div>
+          <p class="sr-only" id="coachCopy" aria-live="polite">The puck only knows the slope beneath it.</p>
+        </div>
+
+        <div class="canvas-wrap" id="canvasWrap">
+          <canvas id="landscape" tabindex="0" aria-label="Interactive loss landscape. Click or drag to place the optimizer puck."></canvas>
+          <div class="canvas-hint">Click or drag to place the puck</div>
+        </div>
+
+        <div class="readout" aria-live="polite">
+          <div class="metric"><span class="metric-label">Iteration</span><span class="metric-value" id="iteration">0</span></div>
+          <div class="metric"><span class="metric-label">Loss</span><span class="metric-value" id="loss">0.000</span></div>
+          <div class="metric"><span class="metric-label">Local slope</span><span class="metric-value" id="gradient">0.000</span></div>
+          <div class="metric"><span class="metric-label">Best seen</span><span class="metric-value good" id="bestLoss">0.000</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="lab" aria-label="Optimizer controls and experiments">
+      <div class="panel controls-panel">
+        <div>
+          <div class="controls-title">
+            <h2>Tune the optimizer</h2>
+            <p><kbd>Space</kbd> run / pause · <kbd>Esc</kbd> reset</p>
+          </div>
+          <div class="slider-grid">
+            <div class="control">
+              <div class="control-head"><label for="learningRate">Learning rate η</label><output class="control-value" id="learningRateValue">0.18</output></div>
+              <input id="learningRate" type="range" min="0.01" max="1.2" step="0.01" value="0.18">
+              <p class="control-note"><strong>Typical toy range 0.10–0.30.</strong> Real values depend on the model and optimizer.</p>
+            </div>
+            <div class="control">
+              <div class="control-head"><label for="momentum">Momentum coefficient β</label><output class="control-value" id="momentumValue">0.20</output></div>
+              <input id="momentum" type="range" min="0" max="0.96" step="0.01" value="0.20">
+              <p class="control-note"><strong>0.80–0.95 is a familiar working range.</strong> Too much can oscillate.</p>
+            </div>
+            <div class="control">
+              <div class="control-head"><label for="shake">Gradient noise σ</label><output class="control-value" id="shakeValue">0.00</output></div>
+              <input id="shake" type="range" min="0" max="0.18" step="0.01" value="0">
+              <p class="control-note"><strong>Usually start at zero.</strong> Mini-batches already introduce structured noise.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="transport" aria-label="Simulation playback">
+          <button class="btn btn-play" id="play" type="button"><span id="playIcon">▶</span><span id="playLabel">Run</span></button>
+          <button class="btn btn-square" id="step" type="button" title="Take one step" aria-label="Take one step">↦</button>
+          <button class="btn btn-square" id="reset" type="button" title="Reset experiment" aria-label="Reset experiment">↺</button>
+        </div>
+      </div>
+    </section>
+
+
+    <section class="bridge" aria-labelledby="bridgeTitle">
+      <div class="bridge-heading">
+        <div>
+          <div class="eyebrow">The honest bridge</div>
+          <h2 id="bridgeTitle">From this toy to real training.</h2>
+        </div>
+        <p>The curve is a map of one part of training—not a tiny replica of the whole thing. These are the exact ideas it stands in for, plus the pieces we have intentionally left outside the frame.</p>
+      </div>
+
+      <div class="translation" aria-label="Visual concepts mapped to machine learning concepts">
+        <article class="translation-item">
+          <div class="translation-icon" aria-hidden="true">●</div>
+          <strong>Puck position → parameters</strong>
+          <p>The model’s learnable weights, compressed here to one coordinate on the horizontal axis.</p>
+        </article>
+        <article class="translation-item">
+          <div class="translation-icon" aria-hidden="true">L</div>
+          <strong>Curve height → loss</strong>
+          <p>A score for how wrong the current model is. Lower points on the curve mean lower loss.</p>
+        </article>
+        <article class="translation-item">
+          <div class="translation-icon" aria-hidden="true">∇</div>
+          <strong>Arrow → gradient</strong>
+          <p>Backpropagation computes which weight changes would raise loss fastest; we go opposite.</p>
+        </article>
+        <article class="translation-item">
+          <div class="translation-icon" aria-hidden="true">↘</div>
+          <strong>Revealed path → updates</strong>
+          <p>The optimizer repeatedly changes weights. One breadcrumb is one training step.</p>
+        </article>
+        <article class="translation-item">
+          <div class="translation-icon" aria-hidden="true">⌁</div>
+          <strong>Knobs → hyperparameters</strong>
+          <p>Choices made by the trainer—not learned weights. They shape how learning behaves.</p>
+        </article>
+      </div>
+
+      <div class="reality-grid">
+        <article class="panel training-loop">
+          <div class="section-kicker">One real training step</div>
+          <h2>The curve visualizes steps 3–5.</h2>
+          <p>Real training must first produce a mistake to learn from. Then the same loop runs again on another batch of examples.</p>
+          <div class="loop-flow" aria-label="The five stages of a training step">
+            <div class="loop-step"><strong>Load a batch</strong><small>Examples and, usually, target answers.</small></div>
+            <div class="loop-step"><strong>Predict</strong><small>A forward pass through the current model.</small></div>
+            <div class="loop-step"><strong>Score error</strong><small>The loss function turns mistakes into a number.</small></div>
+            <div class="loop-step"><strong>Trace blame</strong><small>Backprop finds gradients for every weight.</small></div>
+            <div class="loop-step"><strong>Update</strong><small>The optimizer uses gradients and its settings.</small></div>
+          </div>
+        </article>
+
+        <aside class="panel honest-box">
+          <div class="section-kicker">What this toy hides</div>
+          <h2>No rug pulls later.</h2>
+          <p>The metaphor is useful because we keep its boundary visible.</p>
+          <ul class="honest-list">
+            <li><strong>Real landscapes have millions or billions of dimensions,</strong> not one—and we cannot see the whole surface.</li>
+            <li><strong>A batch only estimates the gradient.</strong> Its sampling noise is more structured than our “shake” knob.</li>
+            <li><strong>Low training loss is not the finish line.</strong> Validation data tells us whether the model generalizes.</li>
+            <li><strong>Hyperparameter tuning compares full runs,</strong> often changing schedules, batch size, regularization, and optimizer—not just three knobs.</li>
+          </ul>
+        </aside>
+      </div>
+
+      <div class="next-ladder">
+        <strong>The road ahead</strong><span>→</span> mini-batches and epochs <span>→</span> train vs. validation curves <span>→</span> overfitting and regularization <span>→</span> schedules, Adam, and real tuning experiments
+      </div>
+    </section>
+
+
+    <section class="field-guide" aria-labelledby="axolotlTitle">
+      <div class="field-guide-heading">
+        <div>
+          <div class="eyebrow">Field guide · Axolotl</div>
+          <h2 id="axolotlTitle">Where the toy becomes a training config.</h2>
+        </div>
+        <p>The visualization uses normalized units. Axolotl uses literal optimizer values, batches, schedules, and regularization. Treat this as a vocabulary map and starting experiment—not a universal recipe.</p>
+      </div>
+
+      <div class="field-guide-grid">
+        <article class="panel math-card">
+          <div class="section-kicker">The formulas underneath</div>
+          <div class="formula-stack">
+            <div class="formula-row">
+              <span>Momentum update</span>
+              <code>vₜ = βvₜ₋₁ − η∇L(θₜ) + σεₜ</code>
+            </div>
+            <div class="formula-row">
+              <span>Parameter update</span>
+              <code>θₜ₊₁ = θₜ + vₜ</code>
+            </div>
+            <div class="formula-row">
+              <span>Effective batch</span>
+              <code>B = micro_batch × accumulation × GPUs</code>
+            </div>
+          </div>
+
+          <div class="parameter-map">
+            <div><strong>η · learning rate</strong><span>Becomes <code>learning_rate</code>; search it logarithmically.</span></div>
+            <div><strong>β · momentum</strong><span>AdamW splits this memory into <code>adam_beta1</code> and <code>adam_beta2</code>.</span></div>
+            <div><strong>σ · gradient noise</strong><span>No direct Axolotl knob; mini-batch sampling supplies most of it.</span></div>
+          </div>
+        </article>
+
+        <article class="panel config-card">
+          <div class="config-card-head">
+            <div>
+              <div class="section-kicker">Illustrative QLoRA start</div>
+              <h2>Axolotl YAML</h2>
+            </div>
+            <span>reference, not prescription</span>
+          </div>
+          <pre><code># optimizer and run shape
+adapter: qlora
+optimizer: paged_adamw_32bit
+learning_rate: 2.0e-4
+lr_scheduler: cosine
+warmup_ratio: 0.10
+weight_decay: 0.0
+
+# effective batch = 2 × 4 × GPU count
+micro_batch_size: 2
+gradient_accumulation_steps: 4
+num_epochs: 4
+max_grad_norm: 1.0</code></pre>
+          <div class="config-notes">
+            <span><strong>Full fine-tune</strong> usually starts with a smaller learning rate.</span>
+            <span><strong>LoRA / QLoRA</strong> often tolerates a larger adapter learning rate.</span>
+            <span><strong>Validation loss</strong> decides whether the configuration generalizes.</span>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <p class="footer-note">Everything runs locally in this file—no libraries, network, or data collection.</p>
+  </main>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const canvas = document.getElementById("landscape");
+      const ctx = canvas.getContext("2d");
+      const wrap = document.getElementById("canvasWrap");
+      const surfaceSelect = document.getElementById("surface");
+      const statusEl = document.getElementById("status");
+      const coachEl = document.getElementById("coachCopy");
+      const playBtn = document.getElementById("play");
+      const playIcon = document.getElementById("playIcon");
+      const playLabel = document.getElementById("playLabel");
+      const stepBtn = document.getElementById("step");
+      const resetBtn = document.getElementById("reset");
+      const scenarioSelect = document.getElementById("scenario");
+      const solveBtn = document.getElementById("solve");
+      const iterationEl = document.getElementById("iteration");
+      const lossEl = document.getElementById("loss");
+      const gradientEl = document.getElementById("gradient");
+      const bestLossEl = document.getElementById("bestLoss");
+
+      const sliders = {
+        lr: document.getElementById("learningRate"),
+        momentum: document.getElementById("momentum"),
+        shake: document.getElementById("shake")
+      };
+      const outputs = {
+        lr: document.getElementById("learningRateValue"),
+        momentum: document.getElementById("momentumValue"),
+        shake: document.getElementById("shakeValue")
+      };
+
+      const DOMAIN = 6;
+      const DEFAULT_START = -3.8;
+      const EDGE_START = 4.45;
+      const EDGE_STRENGTH = .4;
+
+      function edgeLoss(x) {
+        const excess = Math.max(0, Math.abs(x) - EDGE_START);
+        return EDGE_STRENGTH * excess * excess;
+      }
+
+      function edgeGradient(x) {
+        const excess = Math.max(0, Math.abs(x) - EDGE_START);
+        return 2 * EDGE_STRENGTH * excess * Math.sign(x);
+      }
+
+      const surfaces = {
+        traps: {
+          name: "Deceptive foothills",
+          fn(x) {
+            const hiddenBasin = Math.exp(-Math.pow((x - 4.25) / .62, 2));
+            return .42 + .018 * Math.pow(x - 4.45, 2)
+              + .10 * (1 - Math.cos(1.75 * x))
+              + .06 * (1 - Math.cos(4.9 * x))
+              - .31 * hiddenBasin + edgeLoss(x);
+          },
+          grad(x) {
+            const distance = x - 4.25;
+            const hiddenBasin = Math.exp(-Math.pow(distance / .62, 2));
+            return .036 * (x - 4.45)
+              + .175 * Math.sin(1.75 * x)
+              + .294 * Math.sin(4.9 * x)
+              + .62 * distance / (.62 * .62) * hiddenBasin + edgeGradient(x);
+          }
+        },
+        uneven: {
+          name: "Uneven valley",
+          fn(x) {
+            return .31 + .025 * Math.pow(x - 2.1, 2)
+              + .16 * (1 - Math.cos(2.25 * x))
+              + .035 * (1 - Math.cos(5.4 * x)) + edgeLoss(x);
+          },
+          grad(x) {
+            return .05 * (x - 2.1)
+              + .36 * Math.sin(2.25 * x)
+              + .189 * Math.sin(5.4 * x) + edgeGradient(x);
+          }
+        },
+        needle: {
+          name: "Hidden needle",
+          fn(x) {
+            const narrowBasin = Math.exp(-Math.pow((x - 3.35) / .45, 2));
+            return .48 + .03 * Math.pow(x - 3.3, 2)
+              + .075 * (1 - Math.cos(2.7 * x))
+              - .42 * narrowBasin + edgeLoss(x);
+          },
+          grad(x) {
+            const distance = x - 3.35;
+            const narrowBasin = Math.exp(-Math.pow(distance / .45, 2));
+            return .06 * (x - 3.3)
+              + .2025 * Math.sin(2.7 * x)
+              + .84 * distance / (.45 * .45) * narrowBasin + edgeGradient(x);
+          }
+        }
+      };
+
+      const scenarios = {
+        local: {
+          surface: "traps", x: -4.35, seed: 11,
+          initial: { lr: .18, momentum: .15, shake: 0 },
+          solution: { lr: .18, momentum: .88, shake: 0 }
+        },
+        overshoot: {
+          surface: "uneven", x: -4.1, seed: 22,
+          initial: { lr: 1.15, momentum: .92, shake: 0 },
+          solution: { lr: .26, momentum: .92, shake: 0 }
+        },
+        needle: {
+          surface: "needle", x: -3.8, seed: 33,
+          initial: { lr: .18, momentum: .55, shake: 0 },
+          solution: { lr: .18, momentum: .80, shake: 0 }
+        },
+        shake: {
+          surface: "traps", x: -3.8, seed: 44,
+          initial: { lr: .11, momentum: .58, shake: .05 },
+          solution: { lr: .18, momentum: .89, shake: 0 }
+        }
+      };
+
+      const landscapeMeta = {};
+      Object.entries(surfaces).forEach(([key, item]) => {
+        let min = Infinity;
+        let max = -Infinity;
+        let globalX = 0;
+        const values = [];
+        for (let i = 0; i <= 4000; i++) {
+          const x = -DOMAIN + i / 4000 * DOMAIN * 2;
+          const value = item.fn(x);
+          values.push({ x, loss: value });
+          if (value < min) {
+            min = value;
+            globalX = x;
+          }
+          max = Math.max(max, value);
+        }
+        const minima = [];
+        for (let i = 1; i < values.length - 1; i++) {
+          if (values[i].loss < values[i - 1].loss && values[i].loss < values[i + 1].loss) {
+            minima.push(values[i]);
+          }
+        }
+        const span = Math.max(.1, max - min);
+        landscapeMeta[key] = {
+          min,
+          max,
+          globalX,
+          minima,
+          viewMin: Math.max(0, min - span * .08),
+          viewMax: max + span * .12
+        };
+      });
+
+      let width = 0;
+      let height = 0;
+      let dpr = 1;
+      let running = false;
+      let dragging = false;
+      let lastStepAt = 0;
+      let previousLoss = 0;
+      let risingSteps = 0;
+      const motion = {
+        from: DEFAULT_START,
+        to: DEFAULT_START,
+        started: -Infinity,
+        duration: 96
+      };
+      let state = {
+        x: DEFAULT_START,
+        startX: DEFAULT_START,
+        vx: 0,
+        iteration: 0,
+        best: Infinity,
+        bestX: DEFAULT_START,
+        path: [],
+        revealed: [],
+        lastVisibleX: DEFAULT_START,
+        activeScenario: "local",
+        randomState: scenarios.local.seed
+      };
+
+      function surface() {
+        return surfaces[surfaceSelect.value];
+      }
+
+      function meta() {
+        return landscapeMeta[surfaceSelect.value];
+      }
+
+      function currentLoss() {
+        return surface().fn(state.x);
+      }
+
+      function gradient() {
+        return surface().grad(state.x);
+      }
+
+      function nextRandom() {
+        state.randomState = (Math.imul(state.randomState, 1664525) + 1013904223) >>> 0;
+        return state.randomState / 4294967296;
+      }
+
+      function displayPosition(time = performance.now()) {
+        const raw = clamp((time - motion.started) / motion.duration, 0, 1);
+        const eased = raw * raw * (3 - 2 * raw);
+        return motion.from + (motion.to - motion.from) * eased;
+      }
+
+      function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+      }
+
+      function plotBox() {
+        return {
+          left: 38,
+          right: Math.max(80, width - 24),
+          top: 30,
+          bottom: Math.max(90, height - 40)
+        };
+      }
+
+      function worldToScreenX(x) {
+        const box = plotBox();
+        return box.left + (x + DOMAIN) / (DOMAIN * 2) * (box.right - box.left);
+      }
+
+      function screenToWorldX(x) {
+        const box = plotBox();
+        return (x - box.left) / (box.right - box.left) * DOMAIN * 2 - DOMAIN;
+      }
+
+      function lossToScreenY(loss) {
+        const box = plotBox();
+        const range = meta();
+        const normalized = (loss - range.viewMin) / (range.viewMax - range.viewMin);
+        return box.bottom - normalized * (box.bottom - box.top);
+      }
+
+      function curvePoint(x) {
+        return {
+          x: worldToScreenX(x),
+          y: lossToScreenY(surface().fn(x))
+        };
+      }
+
+      function rememberPosition(x) {
+        if (state.revealed.every(previous => Math.abs(previous - x) > .16)) {
+          state.revealed.push(x);
+        }
+      }
+
+      function revealSegment(from, to) {
+        const steps = Math.max(1, Math.ceil(Math.abs(to - from) / .13));
+        for (let i = 0; i <= steps; i++) {
+          rememberPosition(from + (to - from) * i / steps);
+        }
+      }
+
+      function visibilityAt(x) {
+        let nearest = Infinity;
+        for (const seen of state.revealed) {
+          nearest = Math.min(nearest, Math.abs(x - seen));
+        }
+        const clearRadius = .48;
+        const fogRadius = 1.08;
+        if (nearest <= clearRadius) return 1;
+        if (nearest >= fogRadius) return 0;
+        const t = (nearest - clearRadius) / (fogRadius - clearRadius);
+        return 1 - t * t * (3 - 2 * t);
+      }
+
+      function exploredPercent() {
+        let visible = 0;
+        const samples = 120;
+        for (let i = 0; i < samples; i++) {
+          const x = -DOMAIN + (i + .5) / samples * DOMAIN * 2;
+          if (visibilityAt(x) > .5) visible++;
+        }
+        return Math.round(visible / samples * 100);
+      }
+
+      function resize() {
+        const rect = canvas.getBoundingClientRect();
+        width = Math.max(1, rect.width);
+        height = Math.max(1, rect.height);
+        dpr = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = Math.round(width * dpr);
+        canvas.height = Math.round(height * dpr);
+        draw();
+      }
+
+      function roundedRect(context, x, y, w, h, radius) {
+        const r = Math.min(radius, w / 2, h / 2);
+        context.beginPath();
+        context.moveTo(x + r, y);
+        context.arcTo(x + w, y, x + w, y + h, r);
+        context.arcTo(x + w, y + h, x, y + h, r);
+        context.arcTo(x, y + h, x, y, r);
+        context.arcTo(x, y, x + w, y, r);
+        context.closePath();
+      }
+
+      function hash(value) {
+        const raw = Math.sin(value * 12.9898) * 43758.5453;
+        return raw - Math.floor(raw);
+      }
+
+      function drawAxes(box) {
+        ctx.save();
+        ctx.strokeStyle = "rgba(222,218,248,.09)";
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 7]);
+        for (let i = 0; i <= 4; i++) {
+          const y = box.top + i / 4 * (box.bottom - box.top);
+          ctx.beginPath();
+          ctx.moveTo(box.left, y);
+          ctx.lineTo(box.right, y);
+          ctx.stroke();
+        }
+        ctx.setLineDash([]);
+        ctx.fillStyle = "rgba(226,221,249,.52)";
+        ctx.font = "800 9px system-ui, sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText("LOSS", box.left, box.top - 9);
+        ctx.textAlign = "center";
+        ctx.fillText("MODEL PARAMETER", (box.left + box.right) / 2, height - 14);
+        ctx.strokeStyle = "rgba(226,221,249,.22)";
+        ctx.beginPath();
+        ctx.moveTo(box.left, box.bottom);
+        ctx.lineTo(box.right, box.bottom);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawFogTexture(box, time) {
+        ctx.save();
+
+        for (let i = 0; i < 16; i++) {
+          const baseX = box.left + hash(i + 31) * (box.right - box.left);
+          const px = baseX + Math.sin(time * .00018 + i * 1.7) * 18;
+          const py = box.top + hash(i + 71) * (box.bottom - box.top);
+          const wx = screenToWorldX(px);
+          const hidden = 1 - visibilityAt(wx);
+          if (hidden < .12) continue;
+          ctx.fillStyle = "rgba(114,103,158," + (.018 + hidden * .032) + ")";
+          ctx.beginPath();
+          ctx.ellipse(px, py, 44 + hash(i + 8) * 74, 9 + hash(i + 19) * 18, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        for (let i = 0; i < 54; i++) {
+          const px = box.left + hash(i + 4) * (box.right - box.left)
+            + Math.sin(time * .00025 + i) * 5;
+          const py = box.top + hash(i + 91) * (box.bottom - box.top);
+          const wx = screenToWorldX(px);
+          const hidden = 1 - visibilityAt(wx);
+          if (hidden < .3) continue;
+          ctx.fillStyle = "rgba(201,194,236," + (.025 + hidden * .055) + ")";
+          if (i % 13 === 0) {
+            ctx.font = "500 " + (12 + Math.round(hash(i + 8) * 8)) + "px Georgia, serif";
+            ctx.fillText("?", px, py);
+          } else {
+            ctx.beginPath();
+            ctx.arc(px, py, .6 + hash(i + 17) * 1.3, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+        ctx.restore();
+      }
+
+      function drawCurve(box, displayX) {
+        const xScale = (box.right - box.left) / (DOMAIN * 2);
+        const step = width > 1100 ? 3 : 2;
+        const earth = ctx.createLinearGradient(0, box.top, 0, box.bottom);
+        earth.addColorStop(0, "rgba(125,105,231,.22)");
+        earth.addColorStop(.45, "rgba(72,59,139,.12)");
+        earth.addColorStop(1, "rgba(18,15,39,.03)");
+
+        for (let px = box.left; px < box.right; px += step) {
+          const nextPx = Math.min(box.right, px + step + .5);
+          const x1 = screenToWorldX(px);
+          const x2 = screenToWorldX(nextPx);
+          const visibility = (visibilityAt(x1) + visibilityAt(x2)) / 2;
+          if (visibility < .008) continue;
+          const y1 = lossToScreenY(surface().fn(x1));
+          const y2 = lossToScreenY(surface().fn(x2));
+
+          ctx.save();
+          ctx.globalAlpha = visibility;
+          ctx.fillStyle = earth;
+          ctx.beginPath();
+          ctx.moveTo(px, y1);
+          ctx.lineTo(nextPx, y2);
+          ctx.lineTo(nextPx, box.bottom);
+          ctx.lineTo(px, box.bottom);
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+
+          for (const depth of [13, 28]) {
+            if (y1 + depth >= box.bottom && y2 + depth >= box.bottom) continue;
+            ctx.strokeStyle = "rgba(125,108,205," + (visibility * (depth === 13 ? .13 : .065)) + ")";
+            ctx.lineWidth = depth === 13 ? 1.4 : 1;
+            ctx.beginPath();
+            ctx.moveTo(px, Math.min(box.bottom, y1 + depth));
+            ctx.lineTo(nextPx, Math.min(box.bottom, y2 + depth));
+            ctx.stroke();
+          }
+
+          ctx.strokeStyle = "rgba(5,4,15," + (.16 + visibility * .62) + ")";
+          ctx.lineWidth = 9;
+          ctx.lineCap = "round";
+          ctx.beginPath();
+          ctx.moveTo(px, y1 + 2);
+          ctx.lineTo(nextPx, y2 + 2);
+          ctx.stroke();
+
+          ctx.strokeStyle = "rgba(239,235,255," + (.08 + visibility * .92) + ")";
+          ctx.lineWidth = 2.6;
+          ctx.beginPath();
+          ctx.moveTo(px, y1);
+          ctx.lineTo(nextPx, y2);
+          ctx.stroke();
+        }
+
+        const puck = curvePoint(displayX);
+        const glow = ctx.createRadialGradient(
+          puck.x, puck.y, 0,
+          puck.x, puck.y, Math.max(80, xScale * 1.2)
+        );
+        glow.addColorStop(0, "rgba(108,92,231,.2)");
+        glow.addColorStop(.55, "rgba(108,92,231,.07)");
+        glow.addColorStop(1, "rgba(108,92,231,0)");
+        ctx.fillStyle = glow;
+        ctx.fillRect(box.left, box.top, box.right - box.left, box.bottom - box.top);
+      }
+
+      function drawVisitedPath(displayX) {
+        if (state.path.length < 2) return;
+        const visiblePath = state.path.slice(0, -1);
+        visiblePath.push(displayX);
+
+        ctx.save();
+        ctx.strokeStyle = "rgba(72,198,168,.88)";
+        ctx.lineWidth = 2;
+        ctx.lineJoin = "round";
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        visiblePath.forEach((x, index) => {
+          const point = curvePoint(x);
+          if (index === 0) ctx.moveTo(point.x, point.y);
+          else ctx.lineTo(point.x, point.y);
+        });
+        ctx.stroke();
+
+        const every = Math.max(1, Math.ceil(visiblePath.length / 24));
+        visiblePath.forEach((x, index) => {
+          if (index % every && index !== visiblePath.length - 1) return;
+          const point = curvePoint(x);
+          ctx.fillStyle = "rgba(72,198,168,.9)";
+          ctx.beginPath();
+          ctx.arc(point.x, point.y, index === visiblePath.length - 1 ? 2.8 : 2.1, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        ctx.restore();
+      }
+
+      function drawMinimumLabels(box) {
+        meta().minima.forEach((item, index) => {
+          if (visibilityAt(item.x) < .62) return;
+          const point = curvePoint(item.x);
+          const absolute = Math.abs(item.x - meta().globalX) < .02;
+          const label = absolute ? "ABSOLUTE MINIMUM" : "LOCAL MINIMUM";
+          const color = absolute ? "#4fd0b0" : "rgba(204,196,238,.78)";
+          const labelY = Math.max(box.top + 52, point.y - (absolute ? 40 : 28) - (index % 2) * 9);
+
+          ctx.save();
+          ctx.font = "850 8px system-ui, sans-serif";
+          const labelWidth = ctx.measureText(label).width + 14;
+          const labelX = clamp(point.x, box.left + labelWidth / 2, box.right - labelWidth / 2);
+          ctx.strokeStyle = color;
+          ctx.lineWidth = absolute ? 1.7 : 1.1;
+          ctx.setLineDash(absolute ? [] : [2, 3]);
+          ctx.beginPath();
+          ctx.moveTo(point.x, point.y - 3);
+          ctx.lineTo(labelX, labelY + 7);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillStyle = absolute ? "rgba(24,72,67,.94)" : "rgba(28,24,48,.9)";
+          roundedRect(ctx, labelX - labelWidth / 2, labelY - 7, labelWidth, 16, 6);
+          ctx.fill();
+          ctx.strokeStyle = color;
+          ctx.stroke();
+          ctx.fillStyle = absolute ? "#baf7e8" : "rgba(230,225,250,.9)";
+          ctx.textAlign = "center";
+          ctx.fillText(label, labelX, labelY + 3);
+          ctx.restore();
+        });
+      }
+
+      function drawBestSeen(box) {
+        if (!Number.isFinite(state.best) || visibilityAt(state.bestX) < .25) return;
+        const point = curvePoint(state.bestX);
+        ctx.save();
+        ctx.strokeStyle = "rgba(247,200,82,.85)";
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([3, 4]);
+        ctx.beginPath();
+        ctx.moveTo(point.x, point.y + 5);
+        ctx.lineTo(point.x, Math.min(box.bottom, point.y + 35));
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = "rgba(247,200,82,.95)";
+        ctx.font = "850 8px system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("BEST SEEN", point.x, Math.min(box.bottom - 3, point.y + 47));
+        ctx.restore();
+      }
+
+      function drawArrow(point, slope, time) {
+        if (Math.abs(slope) < .004) return;
+        const box = plotBox();
+        const xScale = (box.right - box.left) / (DOMAIN * 2);
+        const yScale = (box.bottom - box.top) / (meta().viewMax - meta().viewMin);
+        const direction = -Math.sign(slope);
+        let dx = direction * xScale;
+        let dy = Math.abs(slope) * yScale;
+        const size = Math.hypot(dx, dy);
+        dx /= size;
+        dy /= size;
+        const length = clamp(38 + Math.abs(slope) * 48, 40, 70);
+        const fromX = point.x;
+        const fromY = point.y - 22;
+        const toX = fromX + dx * length;
+        const toY = fromY + dy * length;
+
+        ctx.save();
+        ctx.lineCap = "round";
+
+        ctx.fillStyle = "rgba(255,116,98,.24)";
+        ctx.beginPath();
+        ctx.arc(fromX, fromY, 7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#ff7462";
+        ctx.beginPath();
+        ctx.arc(fromX, fromY, 2.8, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = "rgba(5,4,15,.78)";
+        ctx.lineWidth = 8;
+        ctx.beginPath();
+        ctx.moveTo(fromX, fromY);
+        ctx.lineTo(toX, toY);
+        ctx.stroke();
+        ctx.strokeStyle = "#ff7462";
+        ctx.lineWidth = 3.2;
+        ctx.stroke();
+
+        for (let i = 0; i < 2; i++) {
+          const phase = (time / 620 + i * .5) % 1;
+          const travel = .18 + phase * .62;
+          ctx.fillStyle = "rgba(255,235,225," + (.45 + phase * .45) + ")";
+          ctx.beginPath();
+          ctx.arc(fromX + dx * length * travel, fromY + dy * length * travel, 2.2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        const angle = Math.atan2(toY - fromY, toX - fromX);
+        ctx.fillStyle = "#ff7462";
+        ctx.beginPath();
+        ctx.moveTo(toX + Math.cos(angle) * 2, toY + Math.sin(angle) * 2);
+        ctx.lineTo(toX - Math.cos(angle - .58) * 15, toY - Math.sin(angle - .58) * 15);
+        ctx.lineTo(toX - Math.cos(angle + .58) * 15, toY - Math.sin(angle + .58) * 15);
+        ctx.closePath();
+        ctx.fill();
+
+        if (width > 560) {
+          ctx.fillStyle = "rgba(255,255,255,.82)";
+          ctx.font = "850 8px system-ui, sans-serif";
+          ctx.textAlign = "center";
+          const label = direction > 0 ? "LOCAL DOWNHILL  →" : "←  LOCAL DOWNHILL";
+          ctx.fillText(label, toX, toY - 10);
+        }
+        ctx.restore();
+      }
+
+      function drawPuck(time, displayX) {
+        const point = curvePoint(displayX);
+        const shakeAmount = running ? Number(sliders.shake.value) * 11 : 0;
+        const jitterX = Math.sin(time * .047) * shakeAmount;
+        const jitterY = Math.cos(time * .041) * shakeAmount * .45;
+        const stepDistance = Math.abs(motion.to - motion.from);
+        const stretch = Math.min(.11, stepDistance * .08);
+
+        drawArrow(point, surface().grad(displayX), time);
+
+        ctx.save();
+        ctx.fillStyle = "rgba(0,0,0,.48)";
+        ctx.shadowColor = "rgba(0,0,0,.65)";
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.ellipse(point.x + jitterX, point.y + 1, 15 + stretch * 20, 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        ctx.save();
+        ctx.translate(point.x + jitterX, point.y - 13 + jitterY);
+        ctx.scale(1 + stretch, 1 - stretch * .55);
+        ctx.shadowColor = "rgba(0,0,0,.55)";
+        ctx.shadowBlur = 15;
+        ctx.shadowOffsetY = 7;
+        const ball = ctx.createRadialGradient(-5, -6, 1, 0, 0, 15);
+        ball.addColorStop(0, "#ffad91");
+        ball.addColorStop(.34, "#ff7462");
+        ball.addColorStop(1, "#c94043");
+        ctx.fillStyle = ball;
+        ctx.beginPath();
+        ctx.arc(0, 0, 12.8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowColor = "transparent";
+        ctx.strokeStyle = "rgba(255,255,255,.92)";
+        ctx.lineWidth = 2.4;
+        ctx.stroke();
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(0, 0, 10.2, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.rotate(displayX * 2.8);
+        ctx.strokeStyle = "rgba(107,30,42,.42)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-13, 0);
+        ctx.quadraticCurveTo(0, 5, 13, 0);
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.fillStyle = "rgba(255,255,255,.72)";
+        ctx.beginPath();
+        ctx.arc(-4.2, -4.4, 2.7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function drawHiddenLabels() {
+        const candidates = [
+          { x: -4.85, label: "UNEXPLORED" },
+          { x: 4.85, label: "UNEXPLORED" }
+        ];
+        ctx.save();
+        ctx.fillStyle = "rgba(222,218,248,.24)";
+        ctx.font = "800 8px system-ui, sans-serif";
+        ctx.textAlign = "center";
+        candidates.forEach(item => {
+          if (visibilityAt(item.x) < .08) {
+            ctx.fillText(item.label, worldToScreenX(item.x), height * .51);
+          }
+        });
+        ctx.restore();
+      }
+
+      function drawSurfaceBadge() {
+        const label = surface().name.toUpperCase() + "  •  " + exploredPercent() + "% REVEALED";
+        ctx.save();
+        ctx.font = "800 9px system-ui, sans-serif";
+        const labelWidth = ctx.measureText(label).width + 20;
+        ctx.fillStyle = "rgba(255,255,255,.88)";
+        roundedRect(ctx, width - labelWidth - 14, 13, labelWidth, 25, 8);
+        ctx.fill();
+        ctx.fillStyle = "rgba(32,29,59,.78)";
+        ctx.textAlign = "center";
+        ctx.fillText(label, width - labelWidth / 2 - 14, 29.5);
+        ctx.restore();
+      }
+
+      function draw(time = performance.now()) {
+        if (!width || !height) return;
+        const displayX = displayPosition(time);
+        revealSegment(state.lastVisibleX, displayX);
+        state.lastVisibleX = displayX;
+
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, width, height);
+
+        const backdrop = ctx.createLinearGradient(0, 0, 0, height);
+        backdrop.addColorStop(0, "#17142b");
+        backdrop.addColorStop(1, "#0e0c1b");
+        ctx.fillStyle = backdrop;
+        ctx.fillRect(0, 0, width, height);
+
+        const box = plotBox();
+        drawAxes(box);
+        drawFogTexture(box, time);
+        drawCurve(box, displayX);
+        drawMinimumLabels(box);
+        drawVisitedPath(displayX);
+        drawBestSeen(box);
+        drawHiddenLabels();
+        drawPuck(time, displayX);
+        drawSurfaceBadge();
+
+        ctx.save();
+        const vignette = ctx.createRadialGradient(
+          width / 2, height / 2, Math.min(width, height) * .2,
+          width / 2, height / 2, Math.max(width, height) * .72
+        );
+        vignette.addColorStop(0, "rgba(0,0,0,0)");
+        vignette.addColorStop(1, "rgba(0,0,0,.3)");
+        ctx.fillStyle = vignette;
+        ctx.fillRect(0, 0, width, height);
+        ctx.restore();
+      }
+
+      function updateReadout() {
+        const loss = currentLoss();
+        const slope = Math.abs(gradient());
+        iterationEl.textContent = String(state.iteration);
+        lossEl.textContent = loss < .0005 ? loss.toExponential(1) : loss.toFixed(3);
+        gradientEl.textContent = slope < .0005 ? slope.toExponential(1) : slope.toFixed(3);
+        const best = Number.isFinite(state.best) ? state.best : loss;
+        bestLossEl.textContent = best < .0005 ? best.toExponential(1) : best.toFixed(3);
+      }
+
+      function setStatus(text, type = "") {
+        statusEl.textContent = text;
+        statusEl.className = "status-pill" + (type ? " " + type : "");
+      }
+
+      function updateCoach() {
+        const loss = currentLoss();
+        const slope = Math.abs(gradient());
+        const lr = Number(sliders.lr.value);
+        const momentum = Number(sliders.momentum.value);
+        const shake = Number(sliders.shake.value);
+        const nearGlobal = loss <= meta().min + .012;
+
+        if (Math.abs(state.x) > DOMAIN * .985 || risingSteps >= 4) {
+          coachEl.innerHTML = "<strong>The steps are unstable.</strong> A large learning rate can cross useful valleys—or bounce so hard that loss keeps rising.";
+          setStatus("Overshooting", "warning");
+        } else if (state.iteration > 7 && slope < .014 && Math.abs(state.vx) < .018) {
+          if (nearGlobal) {
+            coachEl.innerHTML = "<strong>This is the deepest basin in this toy.</strong> Notice that the optimizer could not certify that from its local slope; it only discovered a better loss.";
+            setStatus("Deep basin found");
+          } else {
+            coachEl.innerHTML = "<strong>Trapped in a local minimum.</strong> The slope is flat, so gentle gradient descent has no reason to move—even though lower loss may be hiding in the fog.";
+            setStatus("Trapped locally", "warning");
+          }
+          if (shake === 0) setRunning(false);
+        } else if (lr < .05 && state.iteration > 6) {
+          coachEl.innerHTML = "<strong>Safe, but near-sighted.</strong> Tiny steps improve the current answer while making it unlikely that the optimizer will cross the next ridge.";
+          setStatus(running ? "Learning slowly" : "Paused", running ? "running" : "");
+        } else if (momentum > .7 && state.iteration > 4) {
+          coachEl.innerHTML = "<strong>Momentum carries memory.</strong> Enough speed may crest a ridge after the local slope has already turned uphill.";
+          setStatus(running ? "Carrying speed" : "Paused", running ? "running" : "");
+        } else if (shake > .08) {
+          coachEl.innerHTML = "<strong>The search is exploring.</strong> Noise can kick the puck out of shallow wells, but too much prevents it from settling precisely.";
+          setStatus(running ? "Exploring" : "Paused", running ? "running" : "");
+        } else if (state.iteration > 0) {
+          const improvement = previousLoss - loss;
+          coachEl.innerHTML = "<strong>Only local evidence is available.</strong> Loss moved " + (improvement > .00001 ? "down" : "sideways or up") + ", but “best seen” says nothing about the unseen curve.";
+          setStatus(running ? "Exploring locally" : "Paused", running ? "running" : "");
+        } else {
+          coachEl.innerHTML = "<strong>Start with one step.</strong> The puck knows the slope beneath it—not what may be hiding beyond the fog.";
+          setStatus("Local view only");
+        }
+      }
+
+      function optimizerStep() {
+        const slope = gradient();
+        const lr = Number(sliders.lr.value);
+        const momentum = Number(sliders.momentum.value);
+        const shake = Number(sliders.shake.value);
+        const now = performance.now();
+        const visualStart = displayPosition(now);
+        previousLoss = currentLoss();
+
+        const noise = (nextRandom() * 2 - 1) * shake;
+        state.vx = momentum * state.vx - lr * slope + noise;
+        state.x += state.vx;
+
+        let touchedEdge = false;
+        if (Math.abs(state.x) > DOMAIN) {
+          state.x = clamp(state.x, -DOMAIN, DOMAIN);
+          state.vx *= -.28;
+          touchedEdge = true;
+        }
+
+        motion.from = visualStart;
+        motion.to = state.x;
+        motion.started = now;
+        state.iteration += 1;
+        const loss = currentLoss();
+        if (loss < state.best) {
+          state.best = loss;
+          state.bestX = state.x;
+        }
+        risingSteps = loss > previousLoss * 1.025
+          ? risingSteps + 1
+          : Math.max(0, risingSteps - 1);
+        if (touchedEdge) risingSteps = Math.max(4, risingSteps);
+
+        state.path.push(state.x);
+        if (state.path.length > 320) state.path.shift();
+        updateReadout();
+        updateCoach();
+        draw(now);
+      }
+
+      function setRunning(next) {
+        const changed = running !== next;
+        running = next;
+        playIcon.textContent = running ? "Ⅱ" : "▶";
+        playLabel.textContent = running ? "Pause" : "Run";
+        playBtn.setAttribute("aria-label", running ? "Pause simulation" : "Run simulation");
+        if (changed) updateCoach();
+      }
+
+      function placePuck(x, makeStart = true) {
+        setRunning(false);
+        state.x = clamp(x, -DOMAIN, DOMAIN);
+        if (makeStart) state.startX = state.x;
+        state.vx = 0;
+        state.iteration = 0;
+        state.best = surface().fn(state.x);
+        state.bestX = state.x;
+        state.path = [state.x];
+        state.revealed = [];
+        state.lastVisibleX = state.x;
+        motion.from = state.x;
+        motion.to = state.x;
+        motion.started = -Infinity;
+        rememberPosition(state.x);
+        risingSteps = 0;
+        previousLoss = state.best;
+        wrap.classList.add("touched");
+        updateReadout();
+        updateCoach();
+        draw();
+      }
+
+      function reset() {
+        const scenario = scenarios[state.activeScenario];
+        if (scenario) state.randomState = scenario.seed;
+        placePuck(state.startX, false);
+      }
+
+      function setSlider(key, value) {
+        sliders[key].value = value;
+        outputs[key].textContent = Number(value).toFixed(2);
+        const min = Number(sliders[key].min);
+        const max = Number(sliders[key].max);
+        const percent = (Number(value) - min) / (max - min) * 100;
+        sliders[key].style.setProperty("--fill", percent + "%");
+      }
+
+      function applyScenario(name, useSolution = false, autoRun = false) {
+        const scenario = scenarios[name];
+        if (!scenario) return;
+        setRunning(false);
+        state.activeScenario = name;
+        scenarioSelect.value = name;
+        surfaceSelect.value = scenario.surface;
+        const settings = useSolution ? scenario.solution : scenario.initial;
+        setSlider("lr", settings.lr);
+        setSlider("momentum", settings.momentum);
+        setSlider("shake", settings.shake);
+        state.randomState = scenario.seed;
+        placePuck(scenario.x, true);
+        state.randomState = scenario.seed;
+        if (autoRun) {
+          lastStepAt = performance.now();
+          setRunning(true);
+          setStatus("Solution running", "running");
+        }
+      }
+
+      function pointerX(event) {
+        const rect = canvas.getBoundingClientRect();
+        return screenToWorldX(event.clientX - rect.left);
+      }
+
+      canvas.addEventListener("pointerdown", event => {
+        dragging = true;
+        canvas.setPointerCapture(event.pointerId);
+        placePuck(pointerX(event), true);
+      });
+
+      canvas.addEventListener("pointermove", event => {
+        if (!dragging) return;
+        placePuck(pointerX(event), true);
+      });
+
+      canvas.addEventListener("pointerup", () => {
+        dragging = false;
+      });
+
+      canvas.addEventListener("pointercancel", () => {
+        dragging = false;
+      });
+
+      canvas.addEventListener("keydown", event => {
+        const nudge = event.shiftKey ? .5 : .16;
+        let x = state.x;
+        if (event.key === "ArrowLeft") x -= nudge;
+        else if (event.key === "ArrowRight") x += nudge;
+        else if (event.key === "Enter") {
+          setRunning(!running);
+          event.preventDefault();
+          return;
+        } else {
+          return;
+        }
+        event.preventDefault();
+        placePuck(x, true);
+      });
+
+      playBtn.addEventListener("click", () => setRunning(!running));
+      stepBtn.addEventListener("click", () => {
+        setRunning(false);
+        optimizerStep();
+      });
+      resetBtn.addEventListener("click", reset);
+      solveBtn.addEventListener("click", () => {
+        let name = scenarioSelect.value;
+        if (!scenarios[name]) {
+          name = { traps: "local", uneven: "overshoot", needle: "needle" }[surfaceSelect.value];
+        }
+        applyScenario(name, true, true);
+      });
+
+      surfaceSelect.addEventListener("change", () => {
+        state.activeScenario = "custom";
+        scenarioSelect.value = "custom";
+        state.randomState = 1;
+        placePuck(DEFAULT_START, true);
+      });
+
+      scenarioSelect.addEventListener("change", () => {
+        if (scenarios[scenarioSelect.value]) {
+          applyScenario(scenarioSelect.value);
+        } else {
+          state.activeScenario = "custom";
+          placePuck(DEFAULT_START, true);
+        }
+      });
+
+      Object.entries(sliders).forEach(([key, slider]) => {
+        slider.addEventListener("input", () => {
+          setSlider(key, slider.value);
+          updateCoach();
+          draw();
+        });
+        setSlider(key, slider.value);
+      });
+
+
+      window.addEventListener("keydown", event => {
+        const tag = event.target && event.target.tagName;
+        const editingControl = tag === "INPUT" || tag === "SELECT" || tag === "BUTTON";
+        if (event.key === "Escape") {
+          event.preventDefault();
+          reset();
+        } else if (event.code === "Space" && !editingControl) {
+          event.preventDefault();
+          setRunning(!running);
+        }
+      });
+
+      function loop(time) {
+        if (running && time - lastStepAt > 100) {
+          optimizerStep();
+          lastStepAt = time;
+        }
+        const motionActive = time < motion.started + motion.duration + 24;
+        if (running || motionActive || Number(sliders.shake.value) > 0) draw(time);
+        requestAnimationFrame(loop);
+      }
+
+      let resizeTimer;
+      window.addEventListener("resize", () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(resize, 80);
+      });
+
+      resize();
+      applyScenario("local");
+      requestAnimationFrame(loop);
+    })();
+  </script>
+</body>
+</html>
